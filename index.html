@@ -458,30 +458,26 @@
 
         // --- API 逻辑 ---
         async function apiCall(endpoint, payload) {
-            try {
-                if(API_URL.includes("YOUR-NAME")) { 
-                    console.warn("API地址未配置"); 
-                    return {success:false, error:"未配置API地址"}; 
-                }
-                
-                // 验证API_URL格式
-                const fullUrl = API_URL + endpoint;
-                if(fullUrl.includes("//")) {
-                    console.error("URL格式错误，包含双斜杠:", fullUrl);
-                    return {success:false, error:"API配置错误"};
-                }
-                
-                const res = await fetch(fullUrl, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                });
-                return await res.json();
-            } catch(e) { 
-                console.error("API调用失败:", e);
-                return { success: false, error: "网络连接失败" }; 
-            }
+    try {
+        if(API_URL.includes("YOUR-NAME")) { 
+            console.warn("API地址未配置"); 
+            return {success:false, error:"未配置API地址"}; 
         }
+        
+        // 直接拼接URL，不需要验证双斜杠
+        const fullUrl = API_URL + endpoint;
+        
+        const res = await fetch(fullUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        return await res.json();
+    } catch(e) { 
+        console.error("API调用失败:", e);
+        return { success: false, error: "网络连接失败" }; 
+    }
+}
 
         async function doRegister() {
             const email = document.getElementById('email').value.trim();
