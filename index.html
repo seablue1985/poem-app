@@ -457,7 +457,7 @@
         }
 
         // --- API 逻辑 ---
-        async function apiCall(endpoint, payload) {
+       async function apiCall(endpoint, payload) {
     try {
         if(API_URL.includes("YOUR-NAME")) { 
             console.warn("API地址未配置"); 
@@ -466,6 +466,8 @@
         
         // 直接拼接URL，不需要验证双斜杠
         const fullUrl = API_URL + endpoint;
+        
+        console.log("请求URL:", fullUrl); // 添加这行用于调试
         
         const res = await fetch(fullUrl, {
             method: 'POST',
@@ -832,4 +834,5 @@
         init();
     </script>
 </body>
+
 </html>
