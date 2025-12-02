@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <!-- 📱 PWA 核心配置 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e0f2f1"> <!-- 这里的颜色要和您的背景色一致 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3655/3655562.png"> <!-- 这里可以换成您喜欢的图标链接 -->
+<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3655/3655562.png">
+
+<style>
+    /* 📱 针对手机 App 模式的额外优化 */
+    @media (max-width: 768px) {
+        body { padding-bottom: 40px; } /* 防止底部被手机横条挡住 */
+        .app-container { padding: 10px; gap: 15px; height: auto; }
+        .sidebar, .main-content { border-radius: 15px; padding: 15px; }
+        /* 让手机上字体稍微大一点 */
+        .task-card h4 { font-size: 18px; }
+        .poem-card b { font-size: 18px; }
+    }
+</style>
+   <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>古诗·云端雅集</title>
+    <style>
+        :root {
+            /* 🟢 核心配色：清新护眼绿 */
+            --bg-gradient: linear-gradient(135deg, #e0f2f1 0%, #a7f3d0 100%); /* 晨雾绿渐变 */
+            --glass-bg: rgba(255, 255, 255, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.8);
+            --primary: #059669;    /* 翡翠绿 - 主按钮/重点 */
+            --primary-dark: #047857;
+            --secondary: #34d399;  /* 嫩芽绿 - 装饰 */
+            --text-main: #1f2937;  /* 深灰 - 正文 */
+            --text-sub: #4b5563;   /* 浅灰 - 辅助文字 */
+            --accent-red: #ef4444; /* 逾期/错误 */
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        body {
+            background: var(--bg-gradient);
+            font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+
+        /* === 布局容器 === */
+        .app-container {
+            max-width: 1600px; /* 宽屏适配 */
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 320px 1fr; /* 左侧固定320px，右侧自适应 */
+            gap: 25px;
+            height: 95vh;
+        }
+
+        /* === 公共卡片样式 (毛玻璃) === */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            padding: 20px;
+        }
+
+        /* === 左侧边栏 (信息流) === */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .brand-area h1 {
+            font-size: 24px;
+            color: var(--primary-dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 登录条 */
+        .auth-widget {
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; display: inline-block; }
+        .status-dot.online { background: var(--primary); box-shadow: 0 0 8px var(--primary); }
+
+        /* 统计块 */
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .stat-box {
+            background: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-num { font-size: 24px; font-weight: 800; color: var(--primary); display: block; }
+        .stat-desc { font-size: 12px; color: var(--text-sub); }
+
+        /* 任务列表 */
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .task-card {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            border-left: 5px solid transparent;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+            position: relative;
+            overflow: hidden;
+        }
+        .task-card:hover { transform: translateX(5px); }
+        .task-card.new { border-left-color: var(--primary); }
+        .task-card.review { border-left-color: #10b981; }
+        .task-card.overdue { border-left-color: var(--accent-red); }
+        .task-card h4 { margin: 0 0 5px 0; font-size: 16px; }
+        
+        /* 标签 */
+        .badge {
+            font-size: 10px; padding: 2px 6px; border-radius: 4px; color: white; display: inline-block; margin-bottom: 4px;
+        }
+        .bg-new { background: var(--primary); }
+        .bg-rev { background: #10b981; }
+        .bg-ovd { background: var(--accent-red); }
+
+        /* === 右侧主区域 (书库) === */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: 100%;
+            overflow: hidden; /* 防止撑开页面 */
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .search-bar {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            padding: 15px 20px;
+            font-size: 16px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            outline: none;
+            transition: box-shadow 0.3s;
+        }
+        .search-bar:focus { box-shadow: 0 4px 20px rgba(5, 150, 105, 0.15); }
+
+        .btn-icon {
+            width: 46px; height: 46px;
+            border-radius: 12px;
+            border: none;
+            background: white;
+            color: var(--primary);
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .btn-icon:hover { background: var(--primary); color: white; transform: translateY(-2px); }
+
+        /* 诗词网格 (自适应宽屏) */
+        .library-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 5px; /* 防止阴影被切 */
+        }
+        .poem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* 宽屏自适应列数 */
+            gap: 15px;
+        }
+        
+        .poem-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            position: relative;
+        }
+        .poem-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(5, 150, 105, 0.1);
+            border-color: var(--secondary);
+        }
+        .poem-card b { display: block; font-size: 18px; margin-bottom: 5px; color: var(--text-main); }
+        .poem-card small { color: #888; font-size: 13px; }
+        .poem-card.learned { opacity: 0.6; background: #f9fafb; }
+        .poem-card.learned::after {
+            content: "✅"; position: absolute; top: 10px; right: 10px; font-size: 12px;
+        }
+
+        /* === 按钮通用 === */
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-text { background: none; color: var(--primary); }
+        
+        /* === 弹窗样式 === */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(5px);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-card {
+            background: white;
+            width: 500px;
+            max-width: 90%;
+            border-radius: 24px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .poem-content-display {
+            font-family: "KaiTi", "STKaiti", "楷体", serif;
+            font-size: 26px;
+            line-height: 1.8;
+            background: #f0fdf4;
+            padding: 25px;
+            border-radius: 16px;
+            margin: 20px 0;
+            color: #064e3b;
+            white-space: pre-wrap;
+            border: 1px dashed #6ee7b7;
+        }
+
+        /* 输入框美化 */
+        .input-group { margin-bottom: 15px; }
+        .input-field { width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; margin-top: 5px; box-sizing: border-box; }
+
+        /* 响应式：手机端变为单列 */
+        @media (max-width: 768px) {
+            .app-container { grid-template-columns: 1fr; height: auto; padding: 15px; }
+            .sidebar { height: auto; overflow: visible; }
+            .main-content { height: auto; }
+            .library-scroll { overflow: visible; }
+            .poem-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        #confetti-canvas { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 2000; }
+    </style>
+</head>
+<body>
+    <canvas id="confetti-canvas"></canvas>
+
+    <div class="app-container">
+        <!-- 左侧边栏：状态与任务 -->
+        <aside class="sidebar glass-card">
+            <div class="brand-area">
+                <h1>🍃 古诗·云端雅集</h1>
+                <p style="font-size:12px; color:#666; margin-top:5px;">艾宾浩斯记忆曲线 · 智能规划</p>
+            </div>
+
+            <!-- 登录状态 -->
+            <div class="auth-widget">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span id="status-dot" class="status-dot"></span>
+                    <span id="user-name" style="font-weight:600; color:#374151;">本地访客</span>
+                </div>
+                <button class="btn-text" onclick="showAuth()" style="font-size:12px;">切换账号</button>
+            </div>
+
+            <!-- 数据统计 -->
+            <div class="stats-row">
+                <div class="stat-box">
+                    <span class="stat-num" id="count-todo">0</span>
+                    <span class="stat-desc">今日待办</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-num" id="count-done">0</span>
+                    <span class="stat-desc">已熟背</span>
+                </div>
+            </div>
+
+            <!-- 今日任务 -->
+            <div>
+                <h3 style="margin-bottom:15px; color:#374151; display:flex; justify-content:space-between; align-items:center;">
+                    📅 今日任务
+                    <span style="font-size:12px; font-weight:normal; color:#888;">点此开始背诵</span>
+                </h3>
+                <div id="task-list" class="task-list">
+                    <!-- 任务卡片由JS生成 -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- 右侧主区域：藏书阁 -->
+        <main class="main-content glass-card">
+            <div class="toolbar">
+                <input type="text" id="search" class="search-bar" placeholder="🔍 搜索诗词库 (如：李白、春晓)..." oninput="renderUI()">
+                <button class="btn-icon" onclick="showImport()" title="导入新诗">➕</button>
+                <button class="btn-icon" onclick="resetAll()" title="清空重置" style="color:var(--accent-red)">↻</button>
+            </div>
+
+            <h3 style="margin:10px 0; color:#374151;">📚 藏书阁 (点击卡片学习)</h3>
+            
+            <div class="library-scroll">
+                <div id="lib-grid" class="poem-grid">
+                    <!-- 诗词卡片由JS生成 -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 弹窗：登录 -->
+    <div id="auth-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h2>☁️ 云端同步</h2>
+            <p style="color:#666; font-size:14px;">登录后，您的背诵进度将在所有设备间自动同步。</p>
+            <div class="input-group">
+                <input type="text" id="email" class="input-field" placeholder="请输入邮箱或用户名">
+                <input type="password" id="password" class="input-field" placeholder="请输入密码">
+            </div>
+            <button class="btn btn-primary" style="width:100%; padding:12px;" onclick="doLogin()">登录并同步</button>
+            <button class="btn btn-text" style="width:100%; margin-top:10px;" onclick="doRegister()">注册新账号</button>
+            <div id="auth-msg" style="color:red; margin-top:10px; font-size:12px;"></div>
+            <button class="btn-text" onclick="closeModal('auth-modal')" style="position:absolute; top:15px; right:15px; font-size:20px;">×</button>
+        </div>
+    </div>
+
+    <!-- 弹窗：背诵界面 -->
+    <div id="study-modal" class="modal-overlay">
+        <div class="modal-card" style="width:600px;">
+            <span id="study-tag" class="badge bg-new" style="font-size:12px; padding:4px 10px;">新学</span>
+            <h2 id="s-title" style="margin:10px 0; font-size:28px; color:#064e3b;"></h2>
+            <div id="s-author" style="color:#6b7280; font-weight:500;"></div>
+            
+            <div id="s-text" class="poem-content-display"></div>
+            
+            <div style="display:flex; gap:15px; margin-top:20px;">
+                <button class="btn" style="background:#f3f4f6; color:#666; flex:1;" onclick="closeModal('study-modal')">稍后复习</button>
+                <button class="btn btn-primary" style="flex:2; font-size:16px;" onclick="finishTask()">✅ 我背下来了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗：导入 -->
+    <div id="import-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h3>批量导入诗词</h3>
+            
+            <!-- 格式选择器 -->
+            <div class="input-group">
+                <label style="font-size:14px;">导入格式:</label>
+                <select id="import-format" class="input-field">
+                    <option value="pipe">标题|作者|内容 (一行一首)</option>
+                    <option value="json">JSON格式</option>
+                    <option value="plain">普通文本 (标题\n作者\n内容\n空行分隔)</option>
+                </select>
+            </div>
+            
+            <!-- 文本输入区域 -->
+            <div class="input-group">
+                <label style="font-size:14px;">输入内容:</label>
+                <textarea id="import-txt" class="input-field" style="height:120px;" placeholder="根据所选格式输入内容"></textarea>
+            </div>
+            
+            <!-- 文件上传区域 -->
+            <div class="input-group">
+                <label style="font-size:14px;">或从文件导入:</label>
+                <input type="file" id="import-file" class="input-field" accept=".txt,.json" 
+                       style="padding:8px;" onchange="handleFileImport(event)">
+            </div>
+            
+            <!-- 导入选项 -->
+            <div class="input-group">
+                <label>
+                    <input type="checkbox" id="skip-duplicates" checked> 跳过重复诗词
+                </label>
+                <label style="margin-left:15px;">
+                    <input type="checkbox" id="overwrite-existing"> 覆盖重复诗词
+                </label>
+            </div>
+            
+            <!-- 错误提示区域 -->
+            <div id="import-errors" style="color:var(--accent-red); margin:10px 0; font-size:13px; max-height:100px; overflow-y:auto;"></div>
+            
+            <button class="btn btn-primary" style="width:100%; margin-top:15px;" onclick="doImport()">确认导入</button>
+            <button class="btn-text" onclick="closeModal('import-modal')" style="position:absolute; top:15px; right:15px; font-size:20px;">×</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 🟢【重要】请在此填入您的 Cloudflare Worker 地址
+        // ==========================================
+        const API_URL = "https://poemreciter.337968914.workers.dev"; 
+        // ==========================================
+
+        const defaultData = [
+            {id:1,title:"江南",author:"汉乐府",content:"江南可采莲，莲叶何田田。\n鱼戏莲叶间。\n鱼戏莲叶东，鱼戏莲叶西，\n鱼戏莲叶南，鱼戏莲叶北。"},
+            {id:2,title:"咏鹅",author:"骆宾王",content:"鹅，鹅，鹅，曲项向天歌。\n白毛浮绿水，红掌拨清波。"},
+            {id:3,title:"春晓",author:"孟浩然",content:"春眠不觉晓，处处闻啼鸟。\n夜来风雨声，花落知多少。"},
+            {id:4,title:"静夜思",author:"李白",content:"床前明月光，疑是地上霜。\n举头望明月，低头思故乡。"},
+            {id:5,title:"风",author:"李峤",content:"解落三秋叶，能开二月花。\n过江千尺浪，入竹万竿斜。"},
+            {id:6,title:"咏柳",author:"贺知章",content:"碧玉妆成一树高，万条垂下绿丝绦。\n不知细叶谁裁出，二月春风似剪刀。"}
+        ];
+
+        let poems = [];
+        let userInfo = JSON.parse(localStorage.getItem('cf_user') || 'null');
+        let curId=null, curType=null, curRevIdx=null;
+
+        async function init() {
+            try {
+                const localData = localStorage.getItem('poem_data');
+                poems = localData ? JSON.parse(localData) : JSON.parse(JSON.stringify(defaultData));
+                updateAuthUI();
+                if(userInfo) {
+                    try {
+                        await syncData(true);
+                    } catch(e) {
+                        console.log("同步失败，使用本地数据:", e.message);
+                    }
+                }
+                renderUI();
+            } catch(e) {
+                console.error("初始化失败:", e);
+                // 无论如何渲染页面
+                renderUI();
+            }
+        }
+
+        // --- API 逻辑 ---
+        async function apiCall(endpoint, payload) {
+            try {
+                if(API_URL.includes("YOUR-NAME")) { 
+                    console.warn("API地址未配置"); 
+                    return {success:false, error:"未配置API地址"}; 
+                }
+                
+                // 验证API_URL格式
+                const fullUrl = API_URL + endpoint;
+                if(fullUrl.includes("//")) {
+                    console.error("URL格式错误，包含双斜杠:", fullUrl);
+                    return {success:false, error:"API配置错误"};
+                }
+                
+                const res = await fetch(fullUrl, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                return await res.json();
+            } catch(e) { 
+                console.error("API调用失败:", e);
+                return { success: false, error: "网络连接失败" }; 
+            }
+        }
+
+        async function doRegister() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+            if(!email || !password) return alert("请输入完整信息");
+            const res = await apiCall('/register', { email, password, initialData: poems });
+            if(res.success) alert("注册成功，请点击登录");
+            else document.getElementById('auth-msg').innerText = res.error;
+        }
+
+        async function doLogin() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const res = await apiCall('/login', { email, password });
+            if(res.success) {
+                userInfo = { email, password };
+                localStorage.setItem('cf_user', JSON.stringify(userInfo));
+                if(res.data && res.data.length > 0) { poems = res.data; saveLocal(); }
+                updateAuthUI();
+                closeModal('auth-modal');
+                renderUI();
+                alert("欢迎回来！数据已同步。");
+            } else {
+                document.getElementById('auth-msg').innerText = res.error;
+            }
+        }
+
+        async function syncData(silent = false) {
+            if(!userInfo) return;
+            const res = await apiCall('/sync', { ...userInfo, data: poems });
+            if(!res.success && !silent) alert("同步失败: " + res.error);
+        }
+
+        function doLogout() {
+            if(confirm("确定要退出登录吗？")) {
+                userInfo = null;
+                localStorage.removeItem('cf_user');
+                updateAuthUI();
+            }
+        }
+        function saveLocal() { localStorage.setItem('poem_data', JSON.stringify(poems)); }
+
+        // --- 渲染逻辑 ---
+        function renderUI() {
+            const list = document.getElementById('task-list');
+            const grid = document.getElementById('lib-grid');
+            const kw = document.getElementById('search').value.toLowerCase();
+            list.innerHTML = ''; grid.innerHTML = '';
+            
+            let todo=0, done=0;
+            const today = new Date().setHours(0,0,0,0);
+            const intervals = [1,2,4,7,15,30];
+
+            // 排序：未学的按ID排，已学的靠后
+            const sortedPoems = [...poems].sort((a,b) => (a.id - b.id));
+
+            sortedPoems.forEach(p => {
+                if(kw && !p.title.includes(kw) && !p.author.includes(kw) && !p.content.includes(kw)) return;
+
+                if(!p.learnDate) {
+                    // 题库卡片
+                    const el = document.createElement('div');
+                    el.className = 'poem-card';
+                    el.innerHTML = `<b>${p.title}</b><small>${p.author}</small>`;
+                    el.onclick = () => showStudy(p.id, 'new');
+                    grid.appendChild(el);
+                } else {
+                    done++;
+                    const lTime = new Date(p.learnDate).setHours(0,0,0,0);
+                    let need = false, idx = -1, over = false;
+                    
+                    for(let i=0; i<intervals.length; i++) {
+                        const tDate = lTime + intervals[i]*86400000;
+                        if(p.reviews && p.reviews.includes(i)) continue;
+                        if(tDate <= today) { need=true; idx=i; if(tDate<today) over=true; break; }
+                    }
+
+                    if(need) {
+                        todo++;
+                        const el = document.createElement('div');
+                        el.className = `task-card ${over?'overdue':'review'}`;
+                        el.innerHTML = `
+                            <span class="badge ${over?'bg-ovd':'bg-rev'}">${over?'逾期补卡':'今日复习'}</span>
+                            <h4>${p.title}</h4>
+                            <div style="font-size:12px; color:#666;">${p.author}</div>
+                        `;
+                        el.onclick = () => showStudy(p.id, 'rev', idx);
+                        list.appendChild(el);
+                    } else {
+                        // 已学会的卡片
+                        const el = document.createElement('div');
+                        el.className = 'poem-card learned';
+                        el.innerHTML = `<b>${p.title}</b><small>${p.author}</small>`;
+                        el.onclick = () => { if(confirm("重背这首诗？")) showStudy(p.id, 'rev', 999); };
+                        grid.appendChild(el);
+                    }
+                }
+            });
+
+            if(list.children.length===0) list.innerHTML = `<div style="text-align:center;color:#9ca3af;padding:30px;font-size:13px;background:rgba(255,255,255,0.5);border-radius:10px;">🍃 今日无待办<br>去右边选首新诗吧</div>`;
+            
+            document.getElementById('count-todo').innerText = todo;
+            document.getElementById('count-done').innerText = done;
+        }
+
+        function showStudy(id, type, idx) {
+            const p = poems.find(x=>x.id===id);
+            curId=id; curType=type; curRevIdx=idx;
+            document.getElementById('s-title').innerText = p.title;
+            document.getElementById('s-author').innerText = `[${p.author}]`;
+            document.getElementById('s-text').innerText = p.content;
+            
+            const tag = document.getElementById('study-tag');
+            if(type==='new') { tag.innerText='新学'; tag.className='badge bg-new'; }
+            else { tag.innerText='复习'; tag.className='badge bg-rev'; }
+            
+            document.getElementById('study-modal').style.display='flex';
+        }
+
+        async function finishTask() {
+            const p = poems.find(x=>x.id===curId);
+            if(curType==='new') { p.learnDate = new Date().toISOString(); p.reviews=[]; }
+            else { if(!p.reviews) p.reviews=[]; if(curRevIdx!==999) p.reviews.push(curRevIdx); }
+            
+            fireConfetti();
+            saveLocal();
+            closeModal('study-modal');
+            renderUI();
+            if(userInfo) await syncData(true);
+        }
+
+        function updateAuthUI() {
+            const nameEl = document.getElementById('user-name');
+            const dot = document.getElementById('status-dot');
+            if(userInfo) {
+                nameEl.innerText = userInfo.email.split('@')[0];
+                dot.className = 'status-dot online';
+            } else {
+                nameEl.innerText = '本地访客';
+                dot.className = 'status-dot';
+            }
+        }
+
+        // --- 导入功能增强 ---
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            const formatSelect = document.getElementById('import-format');
+            
+            // 根据文件扩展名自动选择格式
+            if (file.name.endsWith('.json')) {
+                formatSelect.value = 'json';
+            } else if (file.name.endsWith('.txt')) {
+                // 保持当前选择或默认
+            }
+            
+            reader.onload = function(e) {
+                document.getElementById('import-txt').value = e.target.result;
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function doImport() {
+            const input = document.getElementById('import-txt').value.trim();
+            const format = document.getElementById('import-format').value;
+            const skipDuplicates = document.getElementById('skip-duplicates').checked;
+            const overwriteExisting = document.getElementById('overwrite-existing').checked;
+            const errorContainer = document.getElementById('import-errors');
+            
+            // 清空之前的错误
+            errorContainer.innerHTML = '';
+            
+            if (!input) {
+                errorContainer.textContent = '请输入内容或选择文件';
+                return;
+            }
+            
+            let poemsToImport = [];
+            let errors = [];
+            
+            // 根据不同格式解析
+            try {
+                switch (format) {
+                    case 'pipe':
+                        [poemsToImport, errors] = parsePipeFormat(input);
+                        break;
+                    case 'json':
+                        [poemsToImport, errors] = parseJsonFormat(input);
+                        break;
+                    case 'plain':
+                        [poemsToImport, errors] = parsePlainTextFormat(input);
+                        break;
+                }
+            } catch (e) {
+                errors.push(`解析错误: ${e.message}`);
+            }
+            
+            // 显示解析错误
+            if (errors.length > 0) {
+                errorContainer.innerHTML = errors.map(err => `<div>• ${err}</div>`).join('');
+                return;
+            }
+            
+            // 重复检测和处理
+            let importedCount = 0;
+            let skippedCount = 0;
+            let overwrittenCount = 0;
+            
+            poemsToImport.forEach(poem => {
+                // 检查是否重复 (基于标题和作者)
+                const existingIndex = poems.findIndex(p => 
+                    p.title.trim() === poem.title.trim() && 
+                    p.author.trim() === poem.author.trim()
+                );
+                
+                if (existingIndex >= 0) {
+                    // 处理重复项
+                    if (overwriteExisting) {
+                        // 保留原有的学习状态
+                        poem.id = poems[existingIndex].id;
+                        poem.learnDate = poems[existingIndex].learnDate;
+                        poem.reviews = poems[existingIndex].reviews;
+                        
+                        poems[existingIndex] = poem;
+                        overwrittenCount++;
+                    } else if (skipDuplicates) {
+                        skippedCount++;
+                        return;
+                    } else {
+                        // 不跳过也不覆盖，添加新的条目(修改标题)
+                        poem.title = `${poem.title} (重复项)`;
+                        poem.id = Date.now() + Math.random();
+                        poems.push(poem);
+                        importedCount++;
+                    }
+                } else {
+                    // 新诗词
+                    poem.id = Date.now() + Math.random();
+                    poems.push(poem);
+                    importedCount++;
+                }
+            });
+            
+            // 保存并刷新
+            if (importedCount > 0 || overwrittenCount > 0) {
+                saveLocal();
+                renderUI();
+                closeModal('import-modal');
+                
+                // 显示导入结果
+                alert(`导入完成!\n成功导入: ${importedCount} 首\n覆盖更新: ${overwrittenCount} 首\n跳过重复: ${skippedCount} 首`);
+            } else {
+                errorContainer.textContent = '没有可导入的新诗词，所有内容都已存在';
+            }
+        }
+
+        // 解析竖线分隔格式
+        function parsePipeFormat(input) {
+            const lines = input.split('\n');
+            const poems = [];
+            const errors = [];
+            
+            lines.forEach((line, index) => {
+                const trimmed = line.trim();
+                if (!trimmed) return; // 跳过空行
+                
+                const parts = trimmed.split('|').map(p => p.trim());
+                if (parts.length < 3) {
+                    errors.push(`第 ${index + 1} 行格式错误，至少需要标题|作者|内容`);
+                    return;
+                }
+                
+                poems.push({
+                    title: parts[0],
+                    author: parts[1],
+                    content: parts.slice(2).join('|') // 允许内容中包含|
+                });
+            });
+            
+            return [poems, errors];
+        }
+
+        // 解析JSON格式
+        function parseJsonFormat(input) {
+            try {
+                const data = JSON.parse(input);
+                const poems = [];
+                const errors = [];
+                
+                if (!Array.isArray(data)) {
+                    throw new Error('JSON格式应为数组');
+                }
+                
+                data.forEach((item, index) => {
+                    if (!item.title || !item.author || !item.content) {
+                        errors.push(`第 ${index + 1} 项缺少必要字段(title, author, content)`);
+                        return;
+                    }
+                    
+                    poems.push({
+                        title: item.title.trim(),
+                        author: item.author.trim(),
+                        content: item.content.trim()
+                    });
+                });
+                
+                return [poems, errors];
+            } catch (e) {
+                throw new Error(`JSON解析失败: ${e.message}`);
+            }
+        }
+
+        // 解析普通文本格式 (标题\n作者\n内容\n空行分隔)
+        function parsePlainTextFormat(input) {
+            const blocks = input.split('\n\n').filter(block => block.trim());
+            const poems = [];
+            const errors = [];
+            
+            blocks.forEach((block, index) => {
+                const lines = block.split('\n').filter(line => line.trim());
+                if (lines.length < 3) {
+                    errors.push(`第 ${index + 1} 首格式错误，需要标题、作者和内容`);
+                    return;
+                }
+                
+                poems.push({
+                    title: lines[0].trim(),
+                    author: lines[1].trim(),
+                    content: lines.slice(2).join('\n').trim()
+                });
+            });
+            
+            return [poems, errors];
+        }
+
+        // --- 辅助函数 ---
+        function showAuth() { document.getElementById('auth-modal').style.display='flex'; }
+        function showImport() { document.getElementById('import-modal').style.display='flex'; }
+        function closeModal(id) { document.getElementById(id).style.display='none'; }
+        function resetAll() { if(confirm("确定清空重置？")) { localStorage.removeItem('poem_data'); location.reload(); }}
+        
+        function fireConfetti() {
+            const c=document.getElementById('confetti-canvas'),x=c.getContext('2d');
+            c.width=innerWidth;c.height=innerHeight;
+            let p=[];for(let i=0;i<120;i++)p.push({x:c.width/2,y:c.height/2,v:{x:(Math.random()-.5)*25,y:(Math.random()-.5)*25},c:`hsl(${Math.random()*120+100},80%,60%)`}); // 绿色系礼花
+            (function f(){x.clearRect(0,0,c.width,c.height);p.forEach(k=>{k.x+=k.v.x;k.y+=k.v.y;k.v.y+=.5;x.fillStyle=k.c;x.fillRect(k.x,k.y,6,6)});if(p[0].y<c.height)requestAnimationFrame(f)})();
+        }
+
+        init();
+    </script>
+</body>
+</html>
