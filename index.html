@@ -8,11 +8,53 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3655/3655562.png"> <!-- 这里可以换成您喜欢的图标链接 -->
 <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3655/3655562.png">
-<!-- 添加到 head 中 -->
-<link rel="manifest" href="/manifest.json">
-<meta name="apple-mobile-web-app-title" content="古诗雅集">
-<meta name="application-name" content="古诗雅集">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<script>
+// 替换原来的API设置
+const supabaseUrl = 'https://ntrrijirsqluulvpgxoj.supabase.co';
+const supabaseKey = 'sb_publishable_ttBOGdcAgCZSExC3Yitx0w_oSFN6P18';
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+// 修改apiCall函数
+async function apiCall(endpoint, payload) {
+  try {
+    if (endpoint === '/register') {
+      const { email, password, initialData } = payload;
+      const { data, error } = await supabase
+        .from('users')
+        .insert([{
+          email,
+          password_hash: password, // 实际应用中应该加密
+          poem_data: initialData
+        }]);
+
+      return error ? { success: false, error: error.message } : { success: true };
+    }
+
+    if (endpoint === '/login') {
+      const { email, password } = payload;
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .eq('password_hash', password)
+        .single();
+
+      if (error || !data) {
+        return { success: false, error: '用户不存在或密码错误' };
+      }
+
+      return { success: true, data: data.poem_data || [] };
+    }
+
+    // 类似修改其他端点
+  } catch(e) {
+    return { success: false, error: e.message };
+  }
+}
+</script>
+    
 <style>
     /* 📱 针对手机 App 模式的额外优化 */
     @media (max-width: 768px) {
@@ -422,18 +464,9 @@
 
     <script>
         // ==========================================
-        const API_URL = "https://poemreciter.337968914.workers.dev"; 
+        const API_URL = "https://ntrrijirsqluulvpgxoj.supabase.co"; 
         // ==========================================
-        // 密码加密函数（使用 bcrypt 替代方案）
-        async function hashPassword(password) {
-        // 实际应用中应该使用更安全的加密方式
-        // 这里使用简单的 SHA-256 作为示例
-            const encoder = new TextEncoder();
-            const data = encoder.encode(password + 'your_salt_here'); // 添加盐值
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            }
+
         const defaultData = [
             {id:1,title:"江南",author:"汉乐府",content:"江南可采莲，莲叶何田田。\n鱼戏莲叶间。\n鱼戏莲叶东，鱼戏莲叶西，\n鱼戏莲叶南，鱼戏莲叶北。"},
             {id:2,title:"咏鹅",author:"骆宾王",content:"鹅，鹅，鹅，曲项向天歌。\n白毛浮绿水，红掌拨清波。"},
@@ -464,131 +497,39 @@
                 console.error("初始化失败:", e);
                 // 无论如何渲染页面
                 renderUI();
-      <script>
+            }
+        }
 
-        // ==========================================
-        // 🟢 1. 初始化 Supabase 客户端 (这是唯一有效的后端)
-        // ==========================================
-        const supabaseUrl = 'https://ntrrijirsqluulvpgxoj.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50cnJpamlyc3FsdXVsdnBneG9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MDE0MjksImV4cCI6MjA4MDQ3NzQyOX0.9XQRR95lQANH59zQ1ZlvGqrZX2lUy5EDJLspscLUuqY';
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-        // ==========================================
-
-        const defaultData = [
-            {id:1,title:"江南",author:"汉乐府",content:"江南可采莲，莲叶何田田。\n鱼戏莲叶间。\n鱼戏莲叶东，鱼戏莲叶西，\n鱼戏莲叶南，鱼戏莲叶北。"},
-            {id:2,title:"咏鹅",author:"骆宾王",content:"鹅，鹅，鹅，曲项向天歌。\n白毛浮绿水，红掌拨清波。"},
-            {id:3,title:"春晓",author:"孟浩然",content:"春眠不觉晓，处处闻啼鸟。\n夜来风雨声，花落知多少。"},
-            {id:4,title:"静夜思",author:"李白",content:"床前明月光，疑是地上霜。\n举头望明月，低头思故乡。"},
-            {id:5,title:"风",author:"李峤",content:"解落三秋叶，能开二月花。\n过江千尺浪，入竹万竿斜。"},
-            {id:6,title:"咏柳",author:"贺知章",content:"碧玉妆成一树高，万条垂下绿丝绦。\n不知细叶谁裁出，二月春风似剪刀。"}
-        ];
-
-        let poems = [];
-        let userInfo = JSON.parse(localStorage.getItem('cf_user') || 'null');
-        let curId=null, curType=null, curRevIdx=null;
-
-        // --- 核心：统一使用 Supabase 的 apiCall 函数 ---
-       async function apiCall(endpoint, payload) {
-  try {
-    // 注册
-    if (endpoint === '/register') {
-      const { email, password, initialData } = payload;
-      
-      // 检查用户是否已存在
-      const { data: existingUser, error: checkError } = await supabase
-        .from('users')
-        .select('email')
-        .eq('email', email)
-        .single();
-      
-      if (existingUser) {
-        return { success: false, error: '该邮箱已被注册' };
-      }
-      
-      const hashedPassword = await hashPassword(password);
-      const { data, error } = await supabase
-        .from('users')
-        .insert([{
-          email,
-          password_hash: hashedPassword,
-          poem_data: initialData || []
-        }])
-        .select();
-      
-      return error ? { success: false, error: error.message } : { success: true, data };
+        // --- API 逻辑 ---
+        async function apiCall(endpoint, payload) {
+    try {
+        if(API_URL.includes("YOUR-NAME")) { 
+            console.warn("API地址未配置"); 
+            return {success:false, error:"未配置API地址"}; 
+        }
+        
+        // 直接拼接URL，不需要验证双斜杠
+        const fullUrl = API_URL + endpoint;
+        
+        const res = await fetch(fullUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        return await res.json();
+    } catch(e) { 
+        console.error("API调用失败:", e);
+        return { success: false, error: "网络连接失败" }; 
     }
-    
-    // 登录
-    if (endpoint === '/login') {
-      const { email, password } = payload;
-      const hashedPassword = await hashPassword(password);
-      
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .eq('password_hash', hashedPassword)
-        .single();
-      
-      if (error || !data) {
-        return { success: false, error: '邮箱或密码错误' };
-      }
-      
-      return { success: true, data: data.poem_data || [] };
-    }
-    
-    // 同步数据
-    if (endpoint === '/sync') {
-      const { email, password, data: syncData } = payload;
-      const hashedPassword = await hashPassword(password);
-      
-      // 验证用户
-      const { data: user, error: authError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', email)
-        .eq('password_hash', hashedPassword)
-        .single();
-      
-      if (authError || !user) {
-        return { success: false, error: '认证失败' };
-      }
-      
-      // 更新数据
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ poem_data: syncData })
-        .eq('id', user.id);
-      
-      return updateError ? 
-        { success: false, error: updateError.message } : 
-        { success: true };
-    }
-    
-    return { success: false, error: '未知的API端点' };
-    
-  } catch(e) {
-    console.error('API调用错误:', e);
-    return { success: false, error: '网络错误: ' + e.message };
-  }
 }
 
-        // --- 用户操作函数 (它们现在会调用统一的 Supabase apiCall) ---
         async function doRegister() {
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value.trim();
-            if(!email || !password) {
-                document.getElementById('auth-msg').innerText = '请输入邮箱和密码';
-                return;
-            }
+            if(!email || !password) return alert("请输入完整信息");
             const res = await apiCall('/register', { email, password, initialData: poems });
-            if(res.success) {
-                alert("注册成功！您现在可以登录了。");
-                // 清空密码框，方便用户直接登录
-                document.getElementById('password').value = '';
-            } else {
-                document.getElementById('auth-msg').innerText = res.error || '注册失败';
-            }
+            if(res.success) alert("注册成功，请点击登录");
+            else document.getElementById('auth-msg').innerText = res.error;
         }
 
         async function doLogin() {
@@ -598,46 +539,120 @@
             if(res.success) {
                 userInfo = { email, password };
                 localStorage.setItem('cf_user', JSON.stringify(userInfo));
-                if(res.data && res.data.length > 0) {
-                    poems = res.data;
-                    saveLocal();
-                }
+                if(res.data && res.data.length > 0) { poems = res.data; saveLocal(); }
                 updateAuthUI();
                 closeModal('auth-modal');
                 renderUI();
-                alert("登录成功！数据已同步。");
+                alert("欢迎回来！数据已同步。");
             } else {
-                document.getElementById('auth-msg').innerText = res.error || '登录失败';
+                document.getElementById('auth-msg').innerText = res.error;
             }
         }
 
         async function syncData(silent = false) {
             if(!userInfo) return;
             const res = await apiCall('/sync', { ...userInfo, data: poems });
-            if(!res.success && !silent) {
-                alert("云端同步失败: " + res.error);
-            } else if (res.success && !silent) {
-                console.log('云端同步成功');
-            }
+            if(!res.success && !silent) alert("同步失败: " + res.error);
         }
 
         function doLogout() {
-            if(confirm("确定要退出登录吗？未同步的数据可能丢失。")) {
+            if(confirm("确定要退出登录吗？")) {
                 userInfo = null;
                 localStorage.removeItem('cf_user');
                 updateAuthUI();
-                renderUI();
             }
         }
-
-        // --- 以下为原有功能函数，无需修改但需确保存在 ---
         function saveLocal() { localStorage.setItem('poem_data', JSON.stringify(poems)); }
-        function renderUI() { /* 您原有的渲染函数 */ }
-        function showStudy(id, type, idx) { /* 您原有的学习函数 */ }
-        async function finishTask() {
-            // ... 您原有的完成任务逻辑
-            if(userInfo) await syncData(true); // 完成任务后静默同步
+
+        // --- 渲染逻辑 ---
+        function renderUI() {
+            const list = document.getElementById('task-list');
+            const grid = document.getElementById('lib-grid');
+            const kw = document.getElementById('search').value.toLowerCase();
+            list.innerHTML = ''; grid.innerHTML = '';
+            
+            let todo=0, done=0;
+            const today = new Date().setHours(0,0,0,0);
+            const intervals = [1,2,4,7,15,30];
+
+            // 排序：未学的按ID排，已学的靠后
+            const sortedPoems = [...poems].sort((a,b) => (a.id - b.id));
+
+            sortedPoems.forEach(p => {
+                if(kw && !p.title.includes(kw) && !p.author.includes(kw) && !p.content.includes(kw)) return;
+
+                if(!p.learnDate) {
+                    // 题库卡片
+                    const el = document.createElement('div');
+                    el.className = 'poem-card';
+                    el.innerHTML = `<b>${p.title}</b><small>${p.author}</small>`;
+                    el.onclick = () => showStudy(p.id, 'new');
+                    grid.appendChild(el);
+                } else {
+                    done++;
+                    const lTime = new Date(p.learnDate).setHours(0,0,0,0);
+                    let need = false, idx = -1, over = false;
+                    
+                    for(let i=0; i<intervals.length; i++) {
+                        const tDate = lTime + intervals[i]*86400000;
+                        if(p.reviews && p.reviews.includes(i)) continue;
+                        if(tDate <= today) { need=true; idx=i; if(tDate<today) over=true; break; }
+                    }
+
+                    if(need) {
+                        todo++;
+                        const el = document.createElement('div');
+                        el.className = `task-card ${over?'overdue':'review'}`;
+                        el.innerHTML = `
+                            <span class="badge ${over?'bg-ovd':'bg-rev'}">${over?'逾期补卡':'今日复习'}</span>
+                            <h4>${p.title}</h4>
+                            <div style="font-size:12px; color:#666;">${p.author}</div>
+                        `;
+                        el.onclick = () => showStudy(p.id, 'rev', idx);
+                        list.appendChild(el);
+                    } else {
+                        // 已学会的卡片
+                        const el = document.createElement('div');
+                        el.className = 'poem-card learned';
+                        el.innerHTML = `<b>${p.title}</b><small>${p.author}</small>`;
+                        el.onclick = () => { if(confirm("重背这首诗？")) showStudy(p.id, 'rev', 999); };
+                        grid.appendChild(el);
+                    }
+                }
+            });
+
+            if(list.children.length===0) list.innerHTML = `<div style="text-align:center;color:#9ca3af;padding:30px;font-size:13px;background:rgba(255,255,255,0.5);border-radius:10px;">🍃 今日无待办<br>去右边选首新诗吧</div>`;
+            
+            document.getElementById('count-todo').innerText = todo;
+            document.getElementById('count-done').innerText = done;
         }
+
+        function showStudy(id, type, idx) {
+            const p = poems.find(x=>x.id===id);
+            curId=id; curType=type; curRevIdx=idx;
+            document.getElementById('s-title').innerText = p.title;
+            document.getElementById('s-author').innerText = `[${p.author}]`;
+            document.getElementById('s-text').innerText = p.content;
+            
+            const tag = document.getElementById('study-tag');
+            if(type==='new') { tag.innerText='新学'; tag.className='badge bg-new'; }
+            else { tag.innerText='复习'; tag.className='badge bg-rev'; }
+            
+            document.getElementById('study-modal').style.display='flex';
+        }
+
+        async function finishTask() {
+            const p = poems.find(x=>x.id===curId);
+            if(curType==='new') { p.learnDate = new Date().toISOString(); p.reviews=[]; }
+            else { if(!p.reviews) p.reviews=[]; if(curRevIdx!==999) p.reviews.push(curRevIdx); }
+            
+            fireConfetti();
+            saveLocal();
+            closeModal('study-modal');
+            renderUI();
+            if(userInfo) await syncData(true);
+        }
+
         function updateAuthUI() {
             const nameEl = document.getElementById('user-name');
             const dot = document.getElementById('status-dot');
@@ -650,26 +665,215 @@
             }
         }
 
-        // --- 辅助与工具函数 (保持原有) ---
+        // --- 导入功能增强 ---
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            const formatSelect = document.getElementById('import-format');
+            
+            // 根据文件扩展名自动选择格式
+            if (file.name.endsWith('.json')) {
+                formatSelect.value = 'json';
+            } else if (file.name.endsWith('.txt')) {
+                // 保持当前选择或默认
+            }
+            
+            reader.onload = function(e) {
+                document.getElementById('import-txt').value = e.target.result;
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function doImport() {
+            const input = document.getElementById('import-txt').value.trim();
+            const format = document.getElementById('import-format').value;
+            const skipDuplicates = document.getElementById('skip-duplicates').checked;
+            const overwriteExisting = document.getElementById('overwrite-existing').checked;
+            const errorContainer = document.getElementById('import-errors');
+            
+            // 清空之前的错误
+            errorContainer.innerHTML = '';
+            
+            if (!input) {
+                errorContainer.textContent = '请输入内容或选择文件';
+                return;
+            }
+            
+            let poemsToImport = [];
+            let errors = [];
+            
+            // 根据不同格式解析
+            try {
+                switch (format) {
+                    case 'pipe':
+                        [poemsToImport, errors] = parsePipeFormat(input);
+                        break;
+                    case 'json':
+                        [poemsToImport, errors] = parseJsonFormat(input);
+                        break;
+                    case 'plain':
+                        [poemsToImport, errors] = parsePlainTextFormat(input);
+                        break;
+                }
+            } catch (e) {
+                errors.push(`解析错误: ${e.message}`);
+            }
+            
+            // 显示解析错误
+            if (errors.length > 0) {
+                errorContainer.innerHTML = errors.map(err => `<div>• ${err}</div>`).join('');
+                return;
+            }
+            
+            // 重复检测和处理
+            let importedCount = 0;
+            let skippedCount = 0;
+            let overwrittenCount = 0;
+            
+            poemsToImport.forEach(poem => {
+                // 检查是否重复 (基于标题和作者)
+                const existingIndex = poems.findIndex(p => 
+                    p.title.trim() === poem.title.trim() && 
+                    p.author.trim() === poem.author.trim()
+                );
+                
+                if (existingIndex >= 0) {
+                    // 处理重复项
+                    if (overwriteExisting) {
+                        // 保留原有的学习状态
+                        poem.id = poems[existingIndex].id;
+                        poem.learnDate = poems[existingIndex].learnDate;
+                        poem.reviews = poems[existingIndex].reviews;
+                        
+                        poems[existingIndex] = poem;
+                        overwrittenCount++;
+                    } else if (skipDuplicates) {
+                        skippedCount++;
+                        return;
+                    } else {
+                        // 不跳过也不覆盖，添加新的条目(修改标题)
+                        poem.title = `${poem.title} (重复项)`;
+                        poem.id = Date.now() + Math.random();
+                        poems.push(poem);
+                        importedCount++;
+                    }
+                } else {
+                    // 新诗词
+                    poem.id = Date.now() + Math.random();
+                    poems.push(poem);
+                    importedCount++;
+                }
+            });
+            
+            // 保存并刷新
+            if (importedCount > 0 || overwrittenCount > 0) {
+                saveLocal();
+                renderUI();
+                closeModal('import-modal');
+                
+                // 显示导入结果
+                alert(`导入完成!\n成功导入: ${importedCount} 首\n覆盖更新: ${overwrittenCount} 首\n跳过重复: ${skippedCount} 首`);
+            } else {
+                errorContainer.textContent = '没有可导入的新诗词，所有内容都已存在';
+            }
+        }
+
+        // 解析竖线分隔格式
+        function parsePipeFormat(input) {
+            const lines = input.split('\n');
+            const poems = [];
+            const errors = [];
+            
+            lines.forEach((line, index) => {
+                const trimmed = line.trim();
+                if (!trimmed) return; // 跳过空行
+                
+                const parts = trimmed.split('|').map(p => p.trim());
+                if (parts.length < 3) {
+                    errors.push(`第 ${index + 1} 行格式错误，至少需要标题|作者|内容`);
+                    return;
+                }
+                
+                poems.push({
+                    title: parts[0],
+                    author: parts[1],
+                    content: parts.slice(2).join('|') // 允许内容中包含|
+                });
+            });
+            
+            return [poems, errors];
+        }
+
+        // 解析JSON格式
+        function parseJsonFormat(input) {
+            try {
+                const data = JSON.parse(input);
+                const poems = [];
+                const errors = [];
+                
+                if (!Array.isArray(data)) {
+                    throw new Error('JSON格式应为数组');
+                }
+                
+                data.forEach((item, index) => {
+                    if (!item.title || !item.author || !item.content) {
+                        errors.push(`第 ${index + 1} 项缺少必要字段(title, author, content)`);
+                        return;
+                    }
+                    
+                    poems.push({
+                        title: item.title.trim(),
+                        author: item.author.trim(),
+                        content: item.content.trim()
+                    });
+                });
+                
+                return [poems, errors];
+            } catch (e) {
+                throw new Error(`JSON解析失败: ${e.message}`);
+            }
+        }
+
+        // 解析普通文本格式 (标题\n作者\n内容\n空行分隔)
+        function parsePlainTextFormat(input) {
+            const blocks = input.split('\n\n').filter(block => block.trim());
+            const poems = [];
+            const errors = [];
+            
+            blocks.forEach((block, index) => {
+                const lines = block.split('\n').filter(line => line.trim());
+                if (lines.length < 3) {
+                    errors.push(`第 ${index + 1} 首格式错误，需要标题、作者和内容`);
+                    return;
+                }
+                
+                poems.push({
+                    title: lines[0].trim(),
+                    author: lines[1].trim(),
+                    content: lines.slice(2).join('\n').trim()
+                });
+            });
+            
+            return [poems, errors];
+        }
+
+        // --- 辅助函数 ---
         function showAuth() { document.getElementById('auth-modal').style.display='flex'; }
         function showImport() { document.getElementById('import-modal').style.display='flex'; }
         function closeModal(id) { document.getElementById(id).style.display='none'; }
-        function resetAll() {
-            if(confirm("确定清空所有本地数据并重置？这不会删除云端账户。")) {
-                localStorage.removeItem('poem_data');
-                localStorage.removeItem('cf_user');
-                location.reload();
-            }
+        function resetAll() { if(confirm("确定清空重置？")) { localStorage.removeItem('poem_data'); location.reload(); }}
+        
+        function fireConfetti() {
+            const c=document.getElementById('confetti-canvas'),x=c.getContext('2d');
+            c.width=innerWidth;c.height=innerHeight;
+            let p=[];for(let i=0;i<120;i++)p.push({x:c.width/2,y:c.height/2,v:{x:(Math.random()-.5)*25,y:(Math.random()-.5)*25},c:`hsl(${Math.random()*120+100},80%,60%)`}); // 绿色系礼花
+            (function f(){x.clearRect(0,0,c.width,c.height);p.forEach(k=>{k.x+=k.v.x;k.y+=k.v.y;k.v.y+=.5;x.fillStyle=k.c;x.fillRect(k.x,k.y,6,6)});if(p[0].y<c.height)requestAnimationFrame(f)})();
         }
-        function fireConfetti() { /* 您原有的庆祝动画 */ }
 
-        // --- 导入/导出相关函数 (保持原有) ---
-        function handleFileImport(event) { /* 原有函数 */ }
-        function doImport() { /* 原有函数，调用后可以考虑触发同步 */ }
-        function parsePipeFormat(input) { /* 原有函数 */ }
-        function parseJsonFormat(input) { /* 原有函数 */ }
-        function parsePlainTextFormat(input) { /* 原有函数 */ }
-
-        // 初始化应用
         init();
     </script>
+</body>
+</html>
