@@ -1,550 +1,25 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <!-- 📱 PWA 核心配置 -->
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#e0f2f1"> <!-- 这里的颜色要和您的背景色一致 -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3655/3655562.png"> <!-- 这里可以换成您喜欢的图标链接 -->
-<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3655/3655562.png">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<script>
-// 替换原来的API设置
-const supabaseUrl = 'https://ntrrijirsqluulvpgxoj.supabase.co';
-const supabaseKey = 'sb_publishable_ttBOGdcAgCZSExC3Yitx0w_oSFN6P18';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-// 修改apiCall函数
-async function apiCall(endpoint, payload) {
-  try {
-    if (endpoint === '/register') {
-      const { email, password, initialData } = payload;
-      const { data, error } = await supabase
-        .from('users')
-        .insert([{
-          email,
-          password_hash: password, // 实际应用中应该加密
-          poem_data: initialData
-        }]);
-
-      return error ? { success: false, error: error.message } : { success: true };
-    }
-
-    if (endpoint === '/login') {
-      const { email, password } = payload;
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .eq('password_hash', password)
-        .single();
-
-      if (error || !data) {
-        return { success: false, error: '用户不存在或密码错误' };
-      }
-
-      return { success: true, data: data.poem_data || [] };
-    }
-
-    // 类似修改其他端点
-  } catch(e) {
-    return { success: false, error: e.message };
-  }
-}
-</script>
-    
-<style>
-    /* 📱 针对手机 App 模式的额外优化 */
-    @media (max-width: 768px) {
-        body { padding-bottom: 40px; } /* 防止底部被手机横条挡住 */
-        .app-container { padding: 10px; gap: 15px; height: auto; }
-        .sidebar, .main-content { border-radius: 15px; padding: 15px; }
-        /* 让手机上字体稍微大一点 */
-        .task-card h4 { font-size: 18px; }
-        .poem-card b { font-size: 18px; }
-    }
-</style>
-   <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>古诗·云端雅集</title>
-    <style>
-        :root {
-            /* 🟢 核心配色：清新护眼绿 */
-            --bg-gradient: linear-gradient(135deg, #e0f2f1 0%, #a7f3d0 100%); /* 晨雾绿渐变 */
-            --glass-bg: rgba(255, 255, 255, 0.75);
-            --glass-border: rgba(255, 255, 255, 0.8);
-            --primary: #059669;    /* 翡翠绿 - 主按钮/重点 */
-            --primary-dark: #047857;
-            --secondary: #34d399;  /* 嫩芽绿 - 装饰 */
-            --text-main: #1f2937;  /* 深灰 - 正文 */
-            --text-sub: #4b5563;   /* 浅灰 - 辅助文字 */
-            --accent-red: #ef4444; /* 逾期/错误 */
-            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-        }
-
-        body {
-            background: var(--bg-gradient);
-            font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            color: var(--text-main);
-            overflow-x: hidden;
-        }
-
-        /* === 布局容器 === */
-        .app-container {
-            max-width: 1600px; /* 宽屏适配 */
-            margin: 0 auto;
-            padding: 20px;
-            display: grid;
-            grid-template-columns: 320px 1fr; /* 左侧固定320px，右侧自适应 */
-            gap: 25px;
-            height: 95vh;
-        }
-
-        /* === 公共卡片样式 (毛玻璃) === */
-        .glass-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            box-shadow: var(--shadow);
-            padding: 20px;
-        }
-
-        /* === 左侧边栏 (信息流) === */
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-
-        .brand-area h1 {
-            font-size: 24px;
-            color: var(--primary-dark);
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        /* 登录条 */
-        .auth-widget {
-            background: white;
-            border-radius: 12px;
-            padding: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 13px;
-        }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; display: inline-block; }
-        .status-dot.online { background: var(--primary); box-shadow: 0 0 8px var(--primary); }
-
-        /* 统计块 */
-        .stats-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-        .stat-box {
-            background: #fff;
-            padding: 15px;
-            border-radius: 12px;
-            text-align: center;
-        }
-        .stat-num { font-size: 24px; font-weight: 800; color: var(--primary); display: block; }
-        .stat-desc { font-size: 12px; color: var(--text-sub); }
-
-        /* 任务列表 */
-        .task-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .task-card {
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
-            border-left: 5px solid transparent;
-            cursor: pointer;
-            transition: transform 0.2s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-            position: relative;
-            overflow: hidden;
-        }
-        .task-card:hover { transform: translateX(5px); }
-        .task-card.new { border-left-color: var(--primary); }
-        .task-card.review { border-left-color: #10b981; }
-        .task-card.overdue { border-left-color: var(--accent-red); }
-        .task-card h4 { margin: 0 0 5px 0; font-size: 16px; }
-        
-        /* 标签 */
-        .badge {
-            font-size: 10px; padding: 2px 6px; border-radius: 4px; color: white; display: inline-block; margin-bottom: 4px;
-        }
-        .bg-new { background: var(--primary); }
-        .bg-rev { background: #10b981; }
-        .bg-ovd { background: var(--accent-red); }
-
-        /* === 右侧主区域 (书库) === */
-        .main-content {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            height: 100%;
-            overflow: hidden; /* 防止撑开页面 */
-        }
-
-        .toolbar {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .search-bar {
-            flex: 1;
-            background: white;
-            border-radius: 12px;
-            padding: 15px 20px;
-            font-size: 16px;
-            border: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-            outline: none;
-            transition: box-shadow 0.3s;
-        }
-        .search-bar:focus { box-shadow: 0 4px 20px rgba(5, 150, 105, 0.15); }
-
-        .btn-icon {
-            width: 46px; height: 46px;
-            border-radius: 12px;
-            border: none;
-            background: white;
-            color: var(--primary);
-            font-size: 20px;
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        }
-        .btn-icon:hover { background: var(--primary); color: white; transform: translateY(-2px); }
-
-        /* 诗词网格 (自适应宽屏) */
-        .library-scroll {
-            flex: 1;
-            overflow-y: auto;
-            padding: 5px; /* 防止阴影被切 */
-        }
-        .poem-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* 宽屏自适应列数 */
-            gap: 15px;
-        }
-        
-        .poem-card {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 1px solid transparent;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-            position: relative;
-        }
-        .poem-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(5, 150, 105, 0.1);
-            border-color: var(--secondary);
-        }
-        .poem-card b { display: block; font-size: 18px; margin-bottom: 5px; color: var(--text-main); }
-        .poem-card small { color: #888; font-size: 13px; }
-        .poem-card.learned { opacity: 0.6; background: #f9fafb; }
-        .poem-card.learned::after {
-            content: "✅"; position: absolute; top: 10px; right: 10px; font-size: 12px;
-        }
-
-        /* === 按钮通用 === */
-        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: 0.2s; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-dark); }
-        .btn-text { background: none; color: var(--primary); }
-        
-        /* === 弹窗样式 === */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.4); backdrop-filter: blur(5px);
-            display: none; justify-content: center; align-items: center; z-index: 1000;
-        }
-        .modal-card {
-            background: white;
-            width: 500px;
-            max-width: 90%;
-            border-radius: 24px;
-            padding: 30px;
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-        .poem-content-display {
-            font-family: "KaiTi", "STKaiti", "楷体", serif;
-            font-size: 26px;
-            line-height: 1.8;
-            background: #f0fdf4;
-            padding: 25px;
-            border-radius: 16px;
-            margin: 20px 0;
-            color: #064e3b;
-            white-space: pre-wrap;
-            border: 1px dashed #6ee7b7;
-        }
-
-        /* 输入框美化 */
-        .input-group { margin-bottom: 15px; }
-        .input-field { width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; margin-top: 5px; box-sizing: border-box; }
-
-        /* 响应式：手机端变为单列 */
-        @media (max-width: 768px) {
-            .app-container { grid-template-columns: 1fr; height: auto; padding: 15px; }
-            .sidebar { height: auto; overflow: visible; }
-            .main-content { height: auto; }
-            .library-scroll { overflow: visible; }
-            .poem-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-        
-        #confetti-canvas { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 2000; }
-    </style>
-</head>
-<body>
-    <canvas id="confetti-canvas"></canvas>
-
-    <div class="app-container">
-        <!-- 左侧边栏：状态与任务 -->
-        <aside class="sidebar glass-card">
-            <div class="brand-area">
-                <h1>🍃 古诗·云端雅集</h1>
-                <p style="font-size:12px; color:#666; margin-top:5px;">艾宾浩斯记忆曲线 · 智能规划</p>
-            </div>
-
-            <!-- 登录状态 -->
-            <div class="auth-widget">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span id="status-dot" class="status-dot"></span>
-                    <span id="user-name" style="font-weight:600; color:#374151;">本地访客</span>
-                </div>
-                <button class="btn-text" onclick="showAuth()" style="font-size:12px;">切换账号</button>
-            </div>
-
-            <!-- 数据统计 -->
-            <div class="stats-row">
-                <div class="stat-box">
-                    <span class="stat-num" id="count-todo">0</span>
-                    <span class="stat-desc">今日待办</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-num" id="count-done">0</span>
-                    <span class="stat-desc">已熟背</span>
-                </div>
-            </div>
-
-            <!-- 今日任务 -->
-            <div>
-                <h3 style="margin-bottom:15px; color:#374151; display:flex; justify-content:space-between; align-items:center;">
-                    📅 今日任务
-                    <span style="font-size:12px; font-weight:normal; color:#888;">点此开始背诵</span>
-                </h3>
-                <div id="task-list" class="task-list">
-                    <!-- 任务卡片由JS生成 -->
-                </div>
-            </div>
-        </aside>
-
-        <!-- 右侧主区域：藏书阁 -->
-        <main class="main-content glass-card">
-            <div class="toolbar">
-                <input type="text" id="search" class="search-bar" placeholder="🔍 搜索诗词库 (如：李白、春晓)..." oninput="renderUI()">
-                <button class="btn-icon" onclick="showImport()" title="导入新诗">➕</button>
-                <button class="btn-icon" onclick="resetAll()" title="清空重置" style="color:var(--accent-red)">↻</button>
-            </div>
-
-            <h3 style="margin:10px 0; color:#374151;">📚 藏书阁 (点击卡片学习)</h3>
-            
-            <div class="library-scroll">
-                <div id="lib-grid" class="poem-grid">
-                    <!-- 诗词卡片由JS生成 -->
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- 弹窗：登录 -->
-    <div id="auth-modal" class="modal-overlay">
-        <div class="modal-card">
-            <h2>☁️ 云端同步</h2>
-            <p style="color:#666; font-size:14px;">登录后，您的背诵进度将在所有设备间自动同步。</p>
-            <div class="input-group">
-                <input type="text" id="email" class="input-field" placeholder="请输入邮箱或用户名">
-                <input type="password" id="password" class="input-field" placeholder="请输入密码">
-            </div>
-            <button class="btn btn-primary" style="width:100%; padding:12px;" onclick="doLogin()">登录并同步</button>
-            <button class="btn btn-text" style="width:100%; margin-top:10px;" onclick="doRegister()">注册新账号</button>
-            <div id="auth-msg" style="color:red; margin-top:10px; font-size:12px;"></div>
-            <button class="btn-text" onclick="closeModal('auth-modal')" style="position:absolute; top:15px; right:15px; font-size:20px;">×</button>
-        </div>
-    </div>
-
-    <!-- 弹窗：背诵界面 -->
-    <div id="study-modal" class="modal-overlay">
-        <div class="modal-card" style="width:600px;">
-            <span id="study-tag" class="badge bg-new" style="font-size:12px; padding:4px 10px;">新学</span>
-            <h2 id="s-title" style="margin:10px 0; font-size:28px; color:#064e3b;"></h2>
-            <div id="s-author" style="color:#6b7280; font-weight:500;"></div>
-            
-            <div id="s-text" class="poem-content-display"></div>
-            
-            <div style="display:flex; gap:15px; margin-top:20px;">
-                <button class="btn" style="background:#f3f4f6; color:#666; flex:1;" onclick="closeModal('study-modal')">稍后复习</button>
-                <button class="btn btn-primary" style="flex:2; font-size:16px;" onclick="finishTask()">✅ 我背下来了</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 弹窗：导入 -->
-    <div id="import-modal" class="modal-overlay">
-        <div class="modal-card">
-            <h3>批量导入诗词</h3>
-            
-            <!-- 格式选择器 -->
-            <div class="input-group">
-                <label style="font-size:14px;">导入格式:</label>
-                <select id="import-format" class="input-field">
-                    <option value="pipe">标题|作者|内容 (一行一首)</option>
-                    <option value="json">JSON格式</option>
-                    <option value="plain">普通文本 (标题\n作者\n内容\n空行分隔)</option>
-                </select>
-            </div>
-            
-            <!-- 文本输入区域 -->
-            <div class="input-group">
-                <label style="font-size:14px;">输入内容:</label>
-                <textarea id="import-txt" class="input-field" style="height:120px;" placeholder="根据所选格式输入内容"></textarea>
-            </div>
-            
-            <!-- 文件上传区域 -->
-            <div class="input-group">
-                <label style="font-size:14px;">或从文件导入:</label>
-                <input type="file" id="import-file" class="input-field" accept=".txt,.json" 
-                       style="padding:8px;" onchange="handleFileImport(event)">
-            </div>
-            
-            <!-- 导入选项 -->
-            <div class="input-group">
-                <label>
-                    <input type="checkbox" id="skip-duplicates" checked> 跳过重复诗词
-                </label>
-                <label style="margin-left:15px;">
-                    <input type="checkbox" id="overwrite-existing"> 覆盖重复诗词
-                </label>
-            </div>
-            
-            <!-- 错误提示区域 -->
-            <div id="import-errors" style="color:var(--accent-red); margin:10px 0; font-size:13px; max-height:100px; overflow-y:auto;"></div>
-            
-            <button class="btn btn-primary" style="width:100%; margin-top:15px;" onclick="doImport()">确认导入</button>
-            <button class="btn-text" onclick="closeModal('import-modal')" style="position:absolute; top:15px; right:15px; font-size:20px;">×</button>
-        </div>
-    </div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
 // ==========================================
-// Supabase 客户端初始化（修复版）
+// Supabase 客户端初始化
 // ==========================================
-const supabaseUrl = 'https://ntrrijirsqluulvpgxoj.supabase.co';
-const supabaseKey = 'sb_publishable_ttBOGdcAgCZSExC3Yitx0w_oSFN6P18';
+let supabase;
+let supabaseUrl = 'https://ntrrijirsqluulvpgxoj.supabase.co';
+let supabaseKey = 'sb_publishable_ttBOGdcAgCZSExC3Yitx0w_oSFN6P18';
 
-// 创建 Supabase 客户端
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
-    auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-        storage: window.localStorage
-    },
-    global: {
-        headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`
+try {
+    supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
+        auth: {
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: true,
+            storage: window.localStorage
         }
-    }
-});
-
-// ==========================================
-// 测试函数：检查 Supabase 连接
-// ==========================================
-async function testSupabaseConnection() {
-    console.log('🔍 测试 Supabase 连接...');
-    
-    try {
-        // 测试 1: 检查基本连接
-        console.log('测试 1: 检查 Supabase 服务...');
-        const testResponse = await fetch(`${supabaseUrl}/rest/v1/`, {
-            headers: {
-                'apikey': supabaseKey,
-                'Authorization': `Bearer ${supabaseKey}`
-            }
-        });
-        
-        if (!testResponse.ok) {
-            throw new Error(`API 测试失败: ${testResponse.status}`);
-        }
-        console.log('✅ Supabase 服务正常');
-        
-        // 测试 2: 检查认证服务
-        console.log('测试 2: 检查认证服务...');
-        const { data: settings, error: settingsError } = await supabase.auth.getSettings();
-        
-        if (settingsError) {
-            throw new Error(`认证服务错误: ${settingsError.message}`);
-        }
-        console.log('✅ 认证服务正常');
-        console.log('设置信息:', settings);
-        
-        // 测试 3: 检查 users 表
-        console.log('测试 3: 检查数据库...');
-        const { error: tableError } = await supabase
-            .from('users')
-            .select('*', { count: 'exact', head: true })
-            .limit(1);
-            
-        if (tableError && tableError.code !== 'PGRST116') {
-            console.warn('⚠️ 数据库表可能不存在或权限不足:', tableError.message);
-        } else {
-            console.log('✅ 数据库连接正常');
-        }
-        
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Supabase 连接测试失败:', error);
-        
-        // 显示用户友好的错误信息
-        if (error.message.includes('Failed to fetch')) {
-            alert('无法连接到服务器。请检查网络连接，或稍后再试。');
-        } else if (error.message.includes('API key')) {
-            alert('API 密钥配置错误。请检查 Supabase 设置。');
-        }
-        
-        return false;
-    }
+    });
+    console.log('✅ Supabase 初始化成功');
+} catch (error) {
+    console.error('❌ Supabase 初始化失败:', error);
+    alert('初始化失败，将使用本地模式');
 }
 
 // ==========================================
@@ -563,108 +38,115 @@ let poems = [];
 let curId=null, curType=null, curRevIdx=null;
 
 // ==========================================
-// 初始化函数
+// 初始化函数（简化版）
 // ==========================================
 async function init() {
-    console.log('🚀 开始初始化古诗学习应用...');
-    
-    // 显示加载状态
-    showLoading('正在检查云端连接...');
+    console.log('🚀 开始初始化...');
     
     try {
-        // 1. 测试 Supabase 连接
-        const isConnected = await testSupabaseConnection();
-        
-        if (!isConnected) {
-            console.log('切换到纯本地模式...');
-            alert('⚠️ 无法连接到云端服务，将使用本地模式。您的数据将保存在浏览器中。');
-            
-            // 使用纯本地模式
-            window.useLocalMode = true;
-        } else {
-            console.log('✅ 云端连接正常');
-            window.useLocalMode = false;
-        }
-        
-        // 2. 检查用户登录状态
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-            console.warn('获取会话失败:', sessionError);
-        }
-        
-        console.log('当前登录状态:', session ? '已登录' : '未登录');
-        
-        // 3. 加载诗词数据
-        if (session && session.user && !window.useLocalMode) {
-            console.log('📥 从云端加载用户数据...');
-            await loadUserData(session.user.id);
-        } else {
-            console.log('📁 从本地存储加载数据...');
-            const localData = localStorage.getItem('poem_data');
-            poems = localData ? JSON.parse(localData) : JSON.parse(JSON.stringify(defaultData));
-            
-            // 如果本地没有数据，保存默认数据
-            if (!localData) {
-                localStorage.setItem('poem_data', JSON.stringify(poems));
-            }
-        }
-        
-        // 4. 更新UI
-        updateAuthUI(session);
-        renderUI();
-        
-        // 5. 监听认证状态变化
-        supabase.auth.onAuthStateChange((event, session) => {
-            console.log('认证状态变化:', event, session);
-            
-            if (window.useLocalMode) {
-                console.log('本地模式，忽略认证变化');
-                return;
-            }
-            
-            updateAuthUI(session);
-            if (session && session.user) {
-                loadUserData(session.user.id);
-            } else {
-                // 切换到本地模式
-                const localData = localStorage.getItem('poem_data');
-                poems = localData ? JSON.parse(localData) : JSON.parse(JSON.stringify(defaultData));
-                renderUI();
-            }
-        });
-        
-        console.log('✅ 应用初始化完成');
-        
-    } catch(e) {
-        console.error("❌ 初始化失败:", e);
-        
-        // 无论如何都渲染页面
+        // 从本地存储加载数据
         const localData = localStorage.getItem('poem_data');
         poems = localData ? JSON.parse(localData) : JSON.parse(JSON.stringify(defaultData));
         
-        if (!localData) {
-            localStorage.setItem('poem_data', JSON.stringify(poems));
+        // 检查 Supabase 是否可用
+        if (!supabase) {
+            console.log('切换到纯本地模式...');
+            window.useLocalMode = true;
+        } else {
+            // 检查用户登录状态
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (!error && session) {
+                console.log('用户已登录:', session.user.email);
+                window.useLocalMode = false;
+                await loadUserData(session.user.id);
+            } else {
+                window.useLocalMode = true;
+            }
         }
         
+        // 更新UI
+        updateAuthUI();
         renderUI();
         
-        alert('初始化过程中出现错误，已切换到本地模式。');
-    } finally {
-        hideLoading();
+    } catch(e) {
+        console.error("初始化失败:", e);
+        // 降级：使用本地数据
+        const localData = localStorage.getItem('poem_data');
+        poems = localData ? JSON.parse(localData) : JSON.parse(JSON.stringify(defaultData));
+        renderUI();
     }
 }
 
 // ==========================================
-// 数据管理函数
+// 基本功能函数（简化版）
 // ==========================================
+function renderUI() {
+    const list = document.getElementById('task-list');
+    const grid = document.getElementById('lib-grid');
+    const kw = document.getElementById('search')?.value.toLowerCase() || '';
+    list.innerHTML = ''; grid.innerHTML = '';
+    
+    let todo=0, done=0;
+    const today = new Date().setHours(0,0,0,0);
+    const intervals = [1,2,4,7,15,30];
+
+    // 排序：未学的按ID排，已学的靠后
+    const sortedPoems = [...poems].sort((a,b) => (a.id - b.id));
+
+    sortedPoems.forEach(p => {
+        if(kw && !p.title.includes(kw) && !p.author.includes(kw) && !p.content.includes(kw)) return;
+
+        if(!p.learnDate) {
+            // 题库卡片
+            const el = document.createElement('div');
+            el.className = 'poem-card';
+            el.innerHTML = `<b>${p.title}</b><small>${p.author}</small>`;
+            el.onclick = () => showStudy(p.id, 'new');
+            grid.appendChild(el);
+        } else {
+            done++;
+            const lTime = new Date(p.learnDate).setHours(0,0,0,0);
+            let need = false, idx = -1, over = false;
+            
+            for(let i=0; i<intervals.length; i++) {
+                const tDate = lTime + intervals[i]*86400000;
+                if(p.reviews && p.reviews.includes(i)) continue;
+                if(tDate <= today) { need=true; idx=i; if(tDate<today) over=true; break; }
+            }
+
+            if(need) {
+                todo++;
+                const el = document.createElement('div');
+                el.className = `task-card ${over?'overdue':'review'}`;
+                el.innerHTML = `
+                    <span class="badge ${over?'bg-ovd':'bg-rev'}">${over?'逾期补卡':'今日复习'}</span>
+                    <h4>${p.title}</h4>
+                    <div style="font-size:12px; color:#666;">${p.author}</div>
+                `;
+                el.onclick = () => showStudy(p.id, 'rev', idx);
+                list.appendChild(el);
+            } else {
+                // 已学会的卡片
+                const el = document.createElement('div');
+                el.className = 'poem-card learned';
+                el.innerHTML = `<b>${p.title}</b><small>${p.author}</small>`;
+                el.onclick = () => { if(confirm("重背这首诗？")) showStudy(p.id, 'rev', 999); };
+                grid.appendChild(el);
+            }
+        }
+    });
+
+    if(list.children.length===0) list.innerHTML = `<div style="text-align:center;color:#9ca3af;padding:30px;font-size:13px;background:rgba(255,255,255,0.5);border-radius:10px;">🍃 今日无待办<br>去右边选首新诗吧</div>`;
+    
+    document.getElementById('count-todo').innerText = todo;
+    document.getElementById('count-done').innerText = done;
+}
+
 async function loadUserData(userId) {
-    if (window.useLocalMode) {
+    if (window.useLocalMode || !supabase) {
         console.log('本地模式，跳过云端数据加载');
         return;
     }
-    
-    console.log('正在加载用户数据，用户ID:', userId);
     
     try {
         const { data, error } = await supabase
@@ -673,123 +155,36 @@ async function loadUserData(userId) {
             .eq('id', userId)
             .single();
             
-        if (error) {
-            console.log('读取用户数据失败:', error);
-            
-            // 如果是"记录不存在"错误，创建新记录
-            if (error.code === 'PGRST116') {
-                console.log('用户记录不存在，创建新记录...');
-                
-                // 获取用户邮箱
-                const { data: userData } = await supabase.auth.getUser();
-                const userEmail = userData.user.email;
-                
-                // 创建新用户记录
-                const { error: insertError } = await supabase
-                    .from('users')
-                    .insert([{
-                        id: userId,
-                        email: userEmail,
-                        poem_data: defaultData,
-                        created_at: new Date().toISOString()
-                    }]);
-                    
-                if (insertError) {
-                    console.error('创建用户记录失败:', insertError);
-                    throw insertError;
-                }
-                
-                poems = JSON.parse(JSON.stringify(defaultData));
-                console.log('✅ 用户记录创建成功');
-            } else {
-                throw error;
-            }
-        } else {
-            console.log('✅ 成功读取用户数据');
-            
-            if (data && data.poem_data && data.poem_data.length > 0) {
-                poems = data.poem_data;
-                console.log('📚 加载了', poems.length, '首诗词');
-            } else {
-                console.log('用户数据为空，使用默认数据');
-                poems = JSON.parse(JSON.stringify(defaultData));
-                
-                // 更新空数据
-                const { error: updateError } = await supabase
-                    .from('users')
-                    .update({ poem_data: poems })
-                    .eq('id', userId);
-                    
-                if (updateError) {
-                    console.error('更新空数据失败:', updateError);
-                }
-            }
-        }
-        
-        // 同步到本地存储作为备份
-        localStorage.setItem('poem_data', JSON.stringify(poems));
-        
-        renderUI();
-        
-    } catch(e) {
-        console.error("❌ 加载用户数据失败:", e);
-        
-        // 降级：使用本地存储
-        const localData = localStorage.getItem('poem_data');
-        poems = localData ? JSON.parse(localData) : JSON.parse(JSON.stringify(defaultData));
-        
-        if (!localData) {
+        if (!error && data && data.poem_data) {
+            poems = data.poem_data;
             localStorage.setItem('poem_data', JSON.stringify(poems));
+            renderUI();
         }
-        
-        console.log('📁 使用本地数据:', poems.length, '首诗词');
-        renderUI();
-        
-        alert('加载云端数据失败，已使用本地备份数据。');
+    } catch(e) {
+        console.error("加载用户数据失败:", e);
     }
 }
 
 async function saveUserData(userId) {
-    if (window.useLocalMode) {
-        console.log('本地模式，保存到本地存储');
+    if (window.useLocalMode || !supabase) {
         localStorage.setItem('poem_data', JSON.stringify(poems));
         return;
     }
     
-    console.log('💾 保存用户数据，用户ID:', userId);
-    
     try {
-        const { error } = await supabase
+        await supabase
             .from('users')
-            .update({ 
-                poem_data: poems,
-                updated_at: new Date().toISOString()
-            })
+            .update({ poem_data: poems })
             .eq('id', userId);
-            
-        if (error) {
-            console.error('保存到云端失败:', error);
-            throw error;
-        }
-        
-        console.log('✅ 云端保存成功');
-        
-        // 同时保存到本地存储作为备份
         localStorage.setItem('poem_data', JSON.stringify(poems));
-        
     } catch(e) {
-        console.error('❌ 保存用户数据失败:', e);
-        
-        // 降级：保存到本地存储
+        console.error('保存用户数据失败:', e);
         localStorage.setItem('poem_data', JSON.stringify(poems));
-        console.log('📁 数据已保存到本地存储');
-        
-        alert('保存到云端失败，数据已保存到本地浏览器。');
     }
 }
 
 // ==========================================
-// 认证函数（双模式：云端 + 本地）
+// 认证函数（简化版）
 // ==========================================
 async function doRegister() {
     const email = document.getElementById('email').value.trim();
@@ -809,89 +204,20 @@ async function doRegister() {
         return;
     }
     
-    // 检查是否使用本地模式
-    if (window.useLocalMode) {
-        // 本地注册模式
-        authMsg.innerText = "正在注册（本地模式）...";
-        
-        // 模拟注册延迟
-        setTimeout(() => {
-            // 保存用户信息到本地
-            localStorage.setItem('local_user_email', email);
-            localStorage.setItem('local_user_password', password);
-            
-            authMsg.style.color = 'green';
-            authMsg.innerText = "注册成功（本地模式）！";
-            
-            // 自动登录
-            setTimeout(() => {
-                doLogin();
-            }, 1000);
-        }, 500);
-        
-        return;
-    }
+    // 本地注册模式（简化）
+    authMsg.innerText = "正在注册（本地模式）...";
     
-    // 云端注册模式
-    try {
-        console.log('📝 正在注册用户:', email);
-        authMsg.innerText = "正在注册...";
+    setTimeout(() => {
+        localStorage.setItem('local_user_email', email);
+        localStorage.setItem('local_user_password', password);
         
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: {
-                    created_at: new Date().toISOString()
-                },
-                emailRedirectTo: window.location.origin
-            }
-        });
+        authMsg.style.color = 'green';
+        authMsg.innerText = "注册成功（本地模式）！";
         
-        if (error) {
-            console.error('注册失败:', error);
-            
-            // 如果是用户已存在错误，尝试直接登录
-            if (error.message.includes('already registered')) {
-                authMsg.innerText = "用户已存在，尝试登录...";
-                setTimeout(() => doLogin(), 1000);
-            } else {
-                authMsg.innerText = error.message;
-            }
-            return;
-        }
-        
-        if (data.user) {
-            console.log('✅ 注册成功:', data.user.email);
-            authMsg.style.color = 'green';
-            
-            // 检查是否需要邮箱确认
-            if (data.session) {
-                authMsg.innerText = "注册成功！";
-                
-                // 自动填充登录表单并登录
-                setTimeout(() => {
-                    doLogin();
-                }, 1000);
-            } else {
-                authMsg.innerText = "注册成功！请检查邮箱确认。";
-            }
-        }
-        
-    } catch(e) {
-        console.error("❌ 注册失败:", e);
-        
-        // 降级到本地模式
-        if (e.message.includes('Failed to fetch') || e.message.includes('Network')) {
-            authMsg.innerText = "网络连接失败，切换到本地模式...";
-            window.useLocalMode = true;
-            
-            // 重新尝试注册（本地模式）
-            setTimeout(() => doRegister(), 500);
-        } else {
-            authMsg.innerText = "注册失败：" + e.message;
-        }
-    }
+        setTimeout(() => {
+            doLogin();
+        }, 1000);
+    }, 500);
 }
 
 async function doLogin() {
@@ -907,196 +233,60 @@ async function doLogin() {
         return;
     }
     
-    // 检查是否使用本地模式
-    if (window.useLocalMode) {
-        // 本地登录模式
-        authMsg.innerText = "正在登录（本地模式）...";
-        
-        // 模拟登录延迟
-        setTimeout(() => {
-            // 检查本地存储的用户信息
-            const savedEmail = localStorage.getItem('local_user_email');
-            const savedPassword = localStorage.getItem('local_user_password');
-            
-            if (email === savedEmail && password === savedPassword) {
-                authMsg.style.color = 'green';
-                authMsg.innerText = "登录成功（本地模式）！";
-                
-                // 关闭弹窗
-                setTimeout(() => {
-                    closeModal('auth-modal');
-                    
-                    // 更新UI显示本地用户
-                    updateAuthUI({ user: { email } });
-                    
-                    // 显示欢迎消息
-                    alert(`欢迎，${email.split('@')[0]}！数据将保存在本地浏览器中。`);
-                }, 1000);
-            } else {
-                authMsg.innerText = "邮箱或密码错误";
-            }
-        }, 500);
-        
-        return;
-    }
+    // 本地登录模式（简化）
+    authMsg.innerText = "正在登录（本地模式）...";
     
-    // 云端登录模式
-    try {
-        console.log('🔐 正在登录:', email);
-        authMsg.innerText = "正在登录...";
+    setTimeout(() => {
+        const savedEmail = localStorage.getItem('local_user_email');
+        const savedPassword = localStorage.getItem('local_user_password');
         
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password
-        });
-        
-        if (error) {
-            console.error('登录失败:', error);
-            
-            // 如果是凭证错误，检查是否要创建新用户
-            if (error.message.includes('Invalid login credentials')) {
-                if (confirm("用户不存在，是否要注册新账号？")) {
-                    doRegister();
-                } else {
-                    authMsg.innerText = "邮箱或密码错误";
-                }
-            } else {
-                authMsg.innerText = error.message;
-            }
-            return;
-        }
-        
-        if (data.user) {
-            console.log('✅ 登录成功:', data.user.email);
+        if (email === savedEmail && password === savedPassword) {
             authMsg.style.color = 'green';
-            authMsg.innerText = "登录成功！";
+            authMsg.innerText = "登录成功（本地模式）！";
             
-            // 关闭弹窗
             setTimeout(() => {
                 closeModal('auth-modal');
-                
-                // 加载用户数据
-                loadUserData(data.user.id);
-                
-                // 显示欢迎消息
-                alert(`欢迎回来，${data.user.email.split('@')[0]}！`);
+                updateAuthUI({ user: { email } });
+                alert(`欢迎，${email.split('@')[0]}！`);
             }, 1000);
-        }
-        
-    } catch(e) {
-        console.error("❌ 登录失败:", e);
-        
-        // 降级到本地模式
-        if (e.message.includes('Failed to fetch') || e.message.includes('Network')) {
-            authMsg.innerText = "网络连接失败，切换到本地模式...";
-            window.useLocalMode = true;
-            
-            // 检查本地是否有该用户
-            const savedEmail = localStorage.getItem('local_user_email');
-            const savedPassword = localStorage.getItem('local_user_password');
-            
-            if (email === savedEmail && password === savedPassword) {
-                setTimeout(() => doLogin(), 500);
-            } else {
-                authMsg.innerText = "网络连接失败，请检查本地用户或注册新用户";
-            }
         } else {
-            authMsg.innerText = "登录失败：" + e.message;
+            authMsg.innerText = "邮箱或密码错误";
         }
-    }
+    }, 500);
 }
 
 async function doLogout() {
     if (confirm("确定要退出登录吗？")) {
-        try {
-            // 先保存当前数据（如果有）
-            if (!window.useLocalMode) {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session) {
-                    await saveUserData(session.user.id);
-                }
-                
-                // 退出登录（云端）
-                const { error } = await supabase.auth.signOut();
-                if (error) {
-                    console.error("退出登录失败:", error);
-                }
-            }
-            
-            // 清除本地用户信息
-            localStorage.removeItem('local_user_email');
-            localStorage.removeItem('local_user_password');
-            
-            console.log('退出登录成功');
-            
-            // 切换到本地访客模式
-            const localData = localStorage.getItem('poem_data');
-            poems = localData ? JSON.parse(localData) : JSON.parse(JSON.stringify(defaultData));
-            
-            if (!localData) {
-                localStorage.setItem('poem_data', JSON.stringify(poems));
-            }
-            
-            renderUI();
-            
-        } catch(e) {
-            console.error("退出登录失败:", e);
-            alert("退出登录失败: " + e.message);
-        }
+        localStorage.removeItem('local_user_email');
+        localStorage.removeItem('local_user_password');
+        updateAuthUI();
+        alert('已退出登录');
     }
 }
 
-// ==========================================
-// 更新认证UI
-// ==========================================
-function updateAuthUI(session) {
-    console.log('更新认证UI，会话:', session);
-    
+function updateAuthUI() {
     const nameEl = document.getElementById('user-name');
     const dot = document.getElementById('status-dot');
     const authWidget = document.querySelector('.auth-widget');
     
-    if (window.useLocalMode) {
-        // 本地模式：检查本地用户
-        const localEmail = localStorage.getItem('local_user_email');
-        
-        if (localEmail) {
-            const displayName = localEmail.split('@')[0];
-            nameEl.innerText = displayName + ' (本地)';
-            dot.className = 'status-dot online';
-            
-            // 更新登录条
-            authWidget.innerHTML = `
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="status-dot online"></span>
-                    <span style="font-weight:600; color:#374151;">${displayName} (本地)</span>
-                </div>
-                <button class="btn-text" onclick="doLogout()" style="font-size:12px;">退出</button>
-            `;
-            return;
-        }
-    }
+    const localEmail = localStorage.getItem('local_user_email');
     
-    if (session && session.user) {
-        // 云端用户已登录
-        const displayName = session.user.email.split('@')[0];
-        nameEl.innerText = displayName;
+    if (localEmail) {
+        const displayName = localEmail.split('@')[0];
+        nameEl.innerText = displayName + ' (本地)';
         dot.className = 'status-dot online';
         
-        // 更新登录条
         authWidget.innerHTML = `
             <div style="display:flex; align-items:center; gap:8px;">
                 <span class="status-dot online"></span>
-                <span style="font-weight:600; color:#374151;">${displayName}</span>
+                <span style="font-weight:600; color:#374151;">${displayName} (本地)</span>
             </div>
             <button class="btn-text" onclick="doLogout()" style="font-size:12px;">退出</button>
         `;
     } else {
-        // 未登录
         nameEl.innerText = '本地访客';
         dot.className = 'status-dot';
         
-        // 恢复登录条
         authWidget.innerHTML = `
             <div style="display:flex; align-items:center; gap:8px;">
                 <span class="status-dot"></span>
@@ -1108,44 +298,121 @@ function updateAuthUI(session) {
 }
 
 // ==========================================
-// 辅助函数
+// 诗词学习功能
 // ==========================================
-function showLoading(message) {
-    // 创建加载遮罩
-    let loadingDiv = document.getElementById('loading-overlay');
-    if (!loadingDiv) {
-        loadingDiv = document.createElement('div');
-        loadingDiv.id = 'loading-overlay';
-        loadingDiv.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            color: white;
-            font-size: 18px;
-        `;
-        document.body.appendChild(loadingDiv);
-    }
+function showStudy(id, type, idx) {
+    const p = poems.find(x=>x.id===id);
+    curId=id; curType=type; curRevIdx=idx;
+    document.getElementById('s-title').innerText = p.title;
+    document.getElementById('s-author').innerText = `[${p.author}]`;
+    document.getElementById('s-text').innerText = p.content;
     
-    loadingDiv.innerHTML = `
-        <div style="text-align: center; background: white; padding: 30px; border-radius: 10px; color: #333;">
-            <div style="margin-bottom: 15px;">⏳ ${message}</div>
-            <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #059669; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-        </div>
-    `;
+    const tag = document.getElementById('study-tag');
+    if(type==='new') { tag.innerText='新学'; tag.className='badge bg-new'; }
+    else { tag.innerText='复习'; tag.className='badge bg-rev'; }
+    
+    document.getElementById('study-modal').style.display='flex';
 }
 
-function hideLoading() {
-    const loadingDiv = document.getElementById('loading-overlay');
-    if (loadingDiv) {
-        loadingDiv.remove();
+async function finishTask() {
+    const p = poems.find(x=>x.id===curId);
+    if(curType==='new') { 
+        p.learnDate = new Date().toISOString(); 
+        p.reviews=[]; 
+    } else { 
+        if(!p.reviews) p.reviews=[];
+        if(curRevIdx!==999) p.reviews.push(curRevIdx);
     }
+    
+    fireConfetti();
+    localStorage.setItem('poem_data', JSON.stringify(poems));
+    closeModal('study-modal');
+    renderUI();
+}
+
+// ==========================================
+// 导入功能（简化版）
+// ==========================================
+function handleFileImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('import-txt').value = e.target.result;
+    };
+    reader.readAsText(file);
+}
+
+function doImport() {
+    const input = document.getElementById('import-txt').value.trim();
+    if (!input) {
+        document.getElementById('import-errors').textContent = '请输入内容或选择文件';
+        return;
+    }
+    
+    // 简单的导入逻辑（你可以根据需要扩展）
+    const lines = input.split('\n').filter(line => line.trim());
+    let importedCount = 0;
+    
+    lines.forEach(line => {
+        if (line.includes('|')) {
+            const parts = line.split('|').map(p => p.trim());
+            if (parts.length >= 3) {
+                poems.push({
+                    id: Date.now() + Math.random(),
+                    title: parts[0],
+                    author: parts[1],
+                    content: parts.slice(2).join('|')
+                });
+                importedCount++;
+            }
+        }
+    });
+    
+    if (importedCount > 0) {
+        localStorage.setItem('poem_data', JSON.stringify(poems));
+        renderUI();
+        closeModal('import-modal');
+        alert(`导入完成! 成功导入: ${importedCount} 首`);
+    }
+}
+
+// ==========================================
+// 辅助函数
+// ==========================================
+function showAuth() { 
+    document.getElementById('auth-modal').style.display='flex'; 
+    document.getElementById('auth-msg').innerText = '';
+    document.getElementById('email').value = '';
+    document.getElementById('password').value = '';
+}
+
+function showImport() { 
+    document.getElementById('import-modal').style.display='flex'; 
+    document.getElementById('import-errors').innerHTML = '';
+    document.getElementById('import-txt').value = '';
+    document.getElementById('import-file').value = '';
+}
+
+function closeModal(id) { 
+    document.getElementById(id).style.display='none'; 
+}
+
+function resetAll() { 
+    if(confirm("确定清空重置所有数据吗？")) { 
+        localStorage.removeItem('poem_data'); 
+        localStorage.removeItem('local_user_email');
+        localStorage.removeItem('local_user_password');
+        location.reload(); 
+    }
+}
+
+function fireConfetti() {
+    const c=document.getElementById('confetti-canvas'),x=c.getContext('2d');
+    c.width=innerWidth;c.height=innerHeight;
+    let p=[];for(let i=0;i<120;i++)p.push({x:c.width/2,y:c.height/2,v:{x:(Math.random()-.5)*25,y:(Math.random()-.5)*25},c:`hsl(${Math.random()*120+100},80%,60%)`});
+    (function f(){x.clearRect(0,0,c.width,c.height);p.forEach(k=>{k.x+=k.v.x;k.y+=k.v.y;k.v.y+=.5;x.fillStyle=k.c;x.fillRect(k.x,k.y,6,6)});if(p[0].y<c.height)requestAnimationFrame(f)})();
 }
 
 // ==========================================
@@ -1154,31 +421,13 @@ function hideLoading() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📄 DOM 加载完成');
     
-    // 添加 spin 动画样式
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    `;
-    document.head.appendChild(style);
+    // 修复搜索框事件监听
+    const searchInput = document.getElementById('search');
+    if (searchInput) {
+        searchInput.oninput = renderUI;
+    }
     
     // 初始化应用
     init();
-    
-    // 添加调试命令到全局
-    window.debugMode = function() {
-        console.log('=== 调试信息 ===');
-        console.log('使用本地模式:', window.useLocalMode);
-        console.log('诗词数量:', poems.length);
-        console.log('Supabase URL:', supabaseUrl);
-        console.log('本地用户:', localStorage.getItem('local_user_email'));
-        
-        // 测试连接
-        testSupabaseConnection();
-    };
-    
-    console.log('🎮 调试命令可用: debugMode()');
 });
 </script>
