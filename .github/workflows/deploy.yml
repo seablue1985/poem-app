@@ -1,0 +1,125 @@
+name: Deploy Static Site to GitHub Pages
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  
+  # 每周日凌晨3点自动部署（保持内容新鲜）
+  schedule:
+    - cron: '0 3 * * 0'
+
+jobs:
+  # 先进行构建测试
+  build-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Validate HTML
+      uses: actions/github-script@v6
+      with:
+        script: |
+          // 简单验证 HTML 文件存在
+          const fs = require('fs');
+          const path = require('path');
+          
+          const htmlPath = path.join(process.env.GITHUB_WORKSPACE, 'index.html');
+          
+          if (!fs.existsSync(htmlPath)) {
+            throw new Error('index.html 文件不存在！');
+          }
+          
+          // 读取文件内容
+          const content = fs.readFileSync(htmlPath, 'utf8');
+          
+          // 简单验证基本结构
+          if (!content.includes('<!DOCTYPE html>')) {
+            console.warn('警告: index.html 可能缺少 DOCTYPE 声明');
+          }
+          
+          if (!content.includes('<html')) {
+            console.warn('警告: index.html 可能缺少 <html> 标签');
+          }
+          
+          console.log('✅ HTML 文件验证通过');
+          
+    - name: Check file sizes
+      run: |
+        echo "文件大小检查:"
+        echo "index.html: $(wc -l < index.html) 行"
+        echo "总文件数: $(find . -type f | wc -l)"
+
+  # 部署到 GitHub Pages
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    # 设置 GitHub Pages 需要的权限
+    permissions:
+      pages: write
+      id-token: write
+      
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup Pages
+      uses: actions/configure-pages@v3
+      
+    - name: Upload to Pages artifact
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: '.'
+        # 排除不需要的文件
+        retention-days: 1
+        
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v2
+      
+    - name: Show deployment URL
+      run: |
+        echo "🎉 部署成功！"
+        echo "网站地址: ${{ steps.deployment.outputs.page_url }}"
+        
+    - name: Send success notification
+      if: success()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { repo, owner } = context.repo;
+          github.rest.repos.createCommitStatus({
+            owner,
+            repo,
+            sha: context.sha,
+            state: 'success',
+            context: 'GitHub Pages Deployment',
+            description: '部署成功到 GitHub Pages',
+            target_url: '${{ steps.deployment.outputs.page_url }}'
+          });
+
+  # 检查链接是否有效（可选）
+  link-check:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Check external links
+      run: |
+        # 安装链接检查工具
+        npm install -g markdown-link-check
+        # 检查 README.md 中的链接
+        if [ -f README.md ]; then
+          markdown-link-check README.md
+        fi
