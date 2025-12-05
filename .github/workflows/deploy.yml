@@ -2,124 +2,87 @@ name: Deploy Static Site to GitHub Pages
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  
-  # 每周日凌晨3点自动部署（保持内容新鲜）
-  schedule:
-    - cron: '0 3 * * 0'
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  # 先进行构建测试
-  build-test:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Validate HTML
-      uses: actions/github-script@v6
-      with:
-        script: |
-          // 简单验证 HTML 文件存在
-          const fs = require('fs');
-          const path = require('path');
-          
-          const htmlPath = path.join(process.env.GITHUB_WORKSPACE, 'index.html');
-          
-          if (!fs.existsSync(htmlPath)) {
-            throw new Error('index.html 文件不存在！');
-          }
-          
-          // 读取文件内容
-          const content = fs.readFileSync(htmlPath, 'utf8');
-          
-          // 简单验证基本结构
-          if (!content.includes('<!DOCTYPE html>')) {
-            console.warn('警告: index.html 可能缺少 DOCTYPE 声明');
-          }
-          
-          if (!content.includes('<html')) {
-            console.warn('警告: index.html 可能缺少 <html> 标签');
-          }
-          
-          console.log('✅ HTML 文件验证通过');
-          
-    - name: Check file sizes
-      run: |
-        echo "文件大小检查:"
-        echo "index.html: $(wc -l < index.html) 行"
-        echo "总文件数: $(find . -type f | wc -l)"
-
-  # 部署到 GitHub Pages
   deploy:
     runs-on: ubuntu-latest
-    needs: build-test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    
-    # 设置 GitHub Pages 需要的权限
-    permissions:
-      pages: write
-      id-token: write
-      
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      
-    - name: Setup Pages
-      uses: actions/configure-pages@v3
-      
-    - name: Upload to Pages artifact
-      uses: actions/upload-pages-artifact@v2
-      with:
-        path: '.'
-        # 排除不需要的文件
-        retention-days: 1
+      # 步骤 1: 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
         
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v2
-      
-    - name: Show deployment URL
-      run: |
-        echo "🎉 部署成功！"
-        echo "网站地址: ${{ steps.deployment.outputs.page_url }}"
+      # 步骤 2: 验证 HTML 文件（可选）
+      - name: Validate HTML file
+        run: |
+          echo "正在验证 index.html 文件..."
+          
+          # 检查文件是否存在
+          if [ ! -f "index.html" ]; then
+            echo "错误: index.html 文件不存在！"
+            echo "当前目录内容:"
+            ls -la
+            exit 1
+          fi
+          
+          # 检查文件是否为空
+          if [ ! -s "index.html" ]; then
+            echo "错误: index.html 文件为空！"
+            exit 1
+          fi
+          
+          # 检查文件基本结构
+          if ! grep -q "<!DOCTYPE html>" "index.html"; then
+            echo "警告: index.html 缺少 DOCTYPE 声明"
+          fi
+          
+          if ! grep -q "<html" "index.html"; then
+            echo "警告: index.html 缺少 <html> 标签"
+          fi
+          
+          if ! grep -q "</html>" "index.html"; then
+            echo "警告: index.html 缺少 </html> 闭合标签"
+          fi
+          
+          echo "✅ HTML 文件验证通过"
+          echo "文件大小: $(wc -c < index.html) 字节"
+          
+      # 步骤 3: 设置 Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
         
-    - name: Send success notification
-      if: success()
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const { repo, owner } = context.repo;
-          github.rest.repos.createCommitStatus({
-            owner,
-            repo,
-            sha: context.sha,
-            state: 'success',
-            context: 'GitHub Pages Deployment',
-            description: '部署成功到 GitHub Pages',
-            target_url: '${{ steps.deployment.outputs.page_url }}'
-          });
-
-  # 检查链接是否有效（可选）
-  link-check:
-    runs-on: ubuntu-latest
-    needs: deploy
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      
-    - name: Check external links
-      run: |
-        # 安装链接检查工具
-        npm install -g markdown-link-check
-        # 检查 README.md 中的链接
-        if [ -f README.md ]; then
-          markdown-link-check README.md
-        fi
+      # 步骤 4: 上传产物
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'  # 上传整个当前目录
+          
+      # 步骤 5: 部署
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        
+      # 步骤 6: 输出部署信息
+      - name: Display deployment info
+        run: |
+          echo "========================================"
+          echo "🎉 部署成功！"
+          echo "🌐 网站地址: ${{ steps.deployment.outputs.page_url }}"
+          echo "📁 部署分支: ${{ github.ref }}"
+          echo "👤 触发用户: ${{ github.actor }}"
+          echo "🕐 部署时间: $(date)"
+          echo "========================================"
